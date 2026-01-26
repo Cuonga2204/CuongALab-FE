@@ -156,6 +156,7 @@ export default function CourseDetail() {
               <UserOutlined style={{ color: "#16a34a" }} />
               Giảng viên: {course?.name_teacher}
             </p>
+            <p className="flex items-center gap-2">ID Course: {course?.id}</p>
           </div>
         </div>
       </div>

@@ -1,11 +1,17 @@
 import { useState } from "react";
-import { Card, Avatar, Space, Button, Input } from "antd";
+import { Card, Avatar, Space, Button } from "antd";
 import type { ReplyItem } from "../types/forum.types";
 
 import { useAuthStore } from "src/store/authStore";
 import { useCreateReply, useUpvoteReply } from "../hooks/useForum.hook";
 
-const { TextArea } = Input;
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import type { Editor } from "@ckeditor/ckeditor5-core";
+import {
+  hasContent,
+  MyUploadAdapterPlugin,
+} from "src/utils/ckeditorUploadAdapter";
 
 interface Props {
   reply: ReplyItem;
@@ -18,24 +24,29 @@ export default function ReplyNode({ reply, topicId }: Props) {
   const createReply = useCreateReply(topicId);
   const upvoteReply = useUpvoteReply(topicId);
 
-  const [text, setText] = useState("");
-  const [openReplyBox, setOpenReplyBox] = useState(false);
+  // 🔹 reply content (HTML)
+  const [text, setText] = useState<string>("");
 
-  // 🔥 Show / hide children replies
+  // 🔹 UI state
+  const [openReplyBox, setOpenReplyBox] = useState(false);
   const [showChildren, setShowChildren] = useState(false);
 
+  /* ======================
+        SUBMIT REPLY
+  ====================== */
   const submitReply = () => {
-    if (!text.trim()) return;
+    if (!hasContent(text)) return;
 
     createReply.mutate({
       topicId,
-      content: text,
+      content: text, // ⬅️ HTML (CKEditor)
       userId: String(user?.id),
       parentId: reply.id,
     });
 
     setText("");
     setOpenReplyBox(false);
+    setShowChildren(true);
   };
 
   return (
@@ -53,10 +64,17 @@ export default function ReplyNode({ reply, topicId }: Props) {
           <Avatar src={reply.user_id.avatar}>{reply.user_id.name[0]}</Avatar>
 
           <div style={{ flex: 1 }}>
+            {/* USER NAME */}
             <b>{reply.user_id.name}</b>
-            <p style={{ marginTop: 4 }}>{reply.content}</p>
 
-            <Space>
+            {/* CONTENT (HTML) */}
+            <div
+              style={{ marginTop: 6 }}
+              dangerouslySetInnerHTML={{ __html: reply.content }}
+            />
+
+            {/* ACTIONS */}
+            <Space size={12} style={{ marginTop: 6 }}>
               {/* Like */}
               <Button
                 type="link"
@@ -70,7 +88,7 @@ export default function ReplyNode({ reply, topicId }: Props) {
                 👍 {reply.upvotes.length}
               </Button>
 
-              {/* Reply button */}
+              {/* Reply */}
               <Button
                 type="link"
                 onClick={() => setOpenReplyBox(!openReplyBox)}
@@ -78,7 +96,7 @@ export default function ReplyNode({ reply, topicId }: Props) {
                 Reply
               </Button>
 
-              {/* Hide / Show children */}
+              {/* Show / Hide children */}
               {reply.replies.length > 0 && (
                 <Button
                   type="link"
@@ -91,17 +109,25 @@ export default function ReplyNode({ reply, topicId }: Props) {
               )}
             </Space>
 
-            {/* Reply Input */}
+            {/* ======================
+                  REPLY EDITOR
+            ====================== */}
             {openReplyBox && (
               <div style={{ marginTop: 10 }}>
-                <TextArea
-                  rows={2}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
+                <CKEditor
+                  editor={ClassicEditor}
+                  data={text}
+                  config={{
+                    extraPlugins: [MyUploadAdapterPlugin],
+                  }}
+                  onChange={(_: unknown, editor: Editor) => {
+                    setText(editor.getData());
+                  }}
                 />
+
                 <Button
                   type="primary"
-                  style={{ marginTop: 6 }}
+                  style={{ marginTop: 8 }}
                   onClick={submitReply}
                 >
                   Send
@@ -109,7 +135,9 @@ export default function ReplyNode({ reply, topicId }: Props) {
               </div>
             )}
 
-            {/* Children Replies */}
+            {/* ======================
+                CHILD REPLIES
+            ====================== */}
             {showChildren && reply.replies.length > 0 && (
               <div style={{ marginTop: 12, marginLeft: 30 }}>
                 {reply.replies.map((child) => (

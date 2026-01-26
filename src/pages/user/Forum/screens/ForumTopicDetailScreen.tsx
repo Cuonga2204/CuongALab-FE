@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, Button, Input, Space, Typography, Avatar, Tag } from "antd";
+import { Card, Button, Space, Typography, Avatar, Tag } from "antd";
 import { useState } from "react";
+import type { Editor } from "@ckeditor/ckeditor5-core";
 
 import { useAuthStore } from "src/store/authStore";
 import {
@@ -12,7 +13,13 @@ import {
 import ReplyNode from "../components/ReplyNode";
 import { useGetCourseDetail } from "src/pages/admin/hooks/course/useCourse.hooks";
 
-const { TextArea } = Input;
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
+import {
+  hasContent,
+  MyUploadAdapterPlugin,
+} from "src/utils/ckeditorUploadAdapter";
+
 const { Title, Text } = Typography;
 
 export default function ForumTopicDetailScreen() {
@@ -20,30 +27,36 @@ export default function ForumTopicDetailScreen() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
 
-  // ALWAYS call hooks
+  /* ======================
+        LOAD DATA
+  ====================== */
   const { data, isLoading } = useGetTopicDetail(topicId || "");
 
   // extract courseId safely
   const courseId = data?.topic?.course_id || "";
-
-  // call hook with enabled condition
   const { data: course } = useGetCourseDetail(courseId);
 
   const createReply = useCreateReply(topicId || "");
   const upvoteTopic = useUpvoteTopic(topicId || "");
 
-  const [text, setText] = useState("");
+  /* ======================
+        STATE
+  ====================== */
+  const [text, setText] = useState<string>("");
 
   if (isLoading || !data) return <div>Loading...</div>;
 
   const { topic, replies } = data;
 
+  /* ======================
+        SUBMIT REPLY
+  ====================== */
   const submitReply = () => {
-    if (!text.trim()) return;
+    if (!hasContent(text)) return;
 
     createReply.mutate({
       topicId: topicId!,
-      content: text,
+      content: text, // ⬅️ HTML từ CKEditor
       userId: String(user?.id),
       parentId: null,
     });
@@ -60,12 +73,16 @@ export default function ForumTopicDetailScreen() {
         background: "#f8f9fa",
       }}
     >
-      {/* Back */}
+      {/* ======================
+            BACK
+      ====================== */}
       <Button onClick={() => navigate(-1)} style={{ marginBottom: 20 }}>
         ← Back
       </Button>
 
-      {/* Topic Card */}
+      {/* ======================
+            TOPIC CARD
+      ====================== */}
       <Card style={{ borderRadius: 12, marginBottom: 24 }}>
         <Space align="start">
           <Avatar src={topic.user_id.avatar} size={50}>
@@ -75,13 +92,14 @@ export default function ForumTopicDetailScreen() {
           <div style={{ flex: 1 }}>
             <Title level={3}>{topic.title}</Title>
 
-            {/* SHOW COURSE INFO */}
+            {/* COURSE INFO */}
             {course && (
               <Tag color="blue" style={{ marginBottom: 10 }}>
                 Khóa học: {course.title} — GV: {course.name_teacher}
               </Tag>
             )}
 
+            {/* CONTENT (HTML) */}
             <div
               style={{
                 background: "#fafafa",
@@ -92,6 +110,7 @@ export default function ForumTopicDetailScreen() {
               dangerouslySetInnerHTML={{ __html: topic.content }}
             />
 
+            {/* UPVOTE */}
             <Button
               type="link"
               onClick={() =>
@@ -109,23 +128,33 @@ export default function ForumTopicDetailScreen() {
         </Space>
       </Card>
 
-      {/* Replies */}
+      {/* ======================
+            REPLIES
+      ====================== */}
       <Title level={4}>Replies ({replies.length})</Title>
 
       {replies.map((reply) => (
         <ReplyNode key={reply.id} reply={reply} topicId={topicId!} />
       ))}
 
-      {/* Reply input */}
+      {/* ======================
+            WRITE REPLY
+      ====================== */}
       <Card style={{ marginTop: 24, borderRadius: 12 }}>
         <Title level={4}>Write a reply</Title>
-        <TextArea
-          rows={4}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Write something..."
+
+        <CKEditor
+          editor={ClassicEditor}
+          data={text}
+          config={{
+            extraPlugins: [MyUploadAdapterPlugin],
+          }}
+          onChange={(_: unknown, editor: Editor) => {
+            setText(editor.getData());
+          }}
         />
-        <Button type="primary" style={{ marginTop: 10 }} onClick={submitReply}>
+
+        <Button type="primary" style={{ marginTop: 12 }} onClick={submitReply}>
           Post Reply
         </Button>
       </Card>

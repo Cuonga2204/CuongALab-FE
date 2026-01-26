@@ -1,21 +1,24 @@
-import { Modal, Input, Select } from "antd";
-import { useState } from "react";
+import { Modal, Input, Image, Typography } from "antd";
+import { useState, type SetStateAction } from "react";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
 
-import { useGetAllCourses } from "src/pages/admin/hooks/course/useCourse.hooks";
 import { useAuthStore } from "src/store/authStore";
 import { useCreateTopic } from "src/pages/user/Forum/hooks/useForum.hook";
 
 import type { CreateTopicPayload } from "src/pages/user/Forum/types/forum.types";
-import type { Course } from "src/types/course.type";
+import { useGetCourseDetail } from "src/pages/admin/hooks/course/useCourse.hooks";
+import { MyUploadAdapterPlugin } from "src/utils/ckeditorUploadAdapter";
+
+const { Text } = Typography;
 
 interface CreateTopicModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  courseId?: string; // optional
+  courseId?: string;
 }
+
 export default function CreateTopicModal({
   open,
   onClose,
@@ -25,18 +28,13 @@ export default function CreateTopicModal({
   const { user } = useAuthStore();
   const createTopic = useCreateTopic();
 
-  // Load danh sách khóa học
-  const { data } = useGetAllCourses();
-  const courses = data?.courses || [];
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [inputCourseId, setInputCourseId] = useState(courseId || "");
 
-  // Local states
-  const [title, setTitle] = useState<string>("");
-  const [content, setContent] = useState<string>("");
-  const [selectedCourse, setSelectedCourse] = useState<string>(courseId || "");
+  // 👉 fetch course detail theo ID nhập
+  const { data: course, isError } = useGetCourseDetail(inputCourseId);
 
-  /** ===========================
-   * SUBMIT: Gửi dữ liệu tạo topic
-   =============================*/
   const handleSubmit = () => {
     if (!title.trim() || !content.trim()) return;
 
@@ -44,16 +42,14 @@ export default function CreateTopicModal({
       userId: String(user?.id),
       title,
       content,
-      course_id: selectedCourse || null,
+      course_id: inputCourseId || null,
     };
 
     createTopic.mutate(payload, {
       onSuccess: () => {
-        // Reset form
         setTitle("");
         setContent("");
-        setSelectedCourse(courseId || "");
-
+        setInputCourseId(courseId || "");
         onSuccess();
         onClose();
       },
@@ -76,26 +72,61 @@ export default function CreateTopicModal({
         onChange={(e) => setTitle(e.target.value)}
       />
 
-      {/* Select Course */}
-      <Select
-        style={{ marginTop: 12, width: "100%" }}
-        placeholder="Select course (optional)"
-        allowClear
-        value={selectedCourse}
-        onChange={(value) => setSelectedCourse(value)}
-        options={courses?.map((c: Course) => ({
-          label: c.title,
-          value: c.id,
-        }))}
+      {/* Course ID Input */}
+      <Input
+        style={{ marginTop: 12 }}
+        placeholder="Enter course ID (optional)"
+        value={inputCourseId}
+        onChange={(e) => setInputCourseId(e.target.value.trim())}
       />
+
+      {/* Course Preview */}
+      {course && (
+        <div
+          style={{
+            marginTop: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            padding: 8,
+            border: "1px solid #eee",
+            borderRadius: 6,
+          }}
+        >
+          <Image
+            src={course.avatar}
+            width={80}
+            height={50}
+            style={{ objectFit: "cover" }}
+            preview={false}
+          />
+          <div>
+            <Text strong>{course.title}</Text>
+            <br />
+            <Text type="secondary">{course.name_teacher}</Text>
+          </div>
+        </div>
+      )}
+
+      {/* Invalid ID */}
+      {inputCourseId && isError && (
+        <Text type="danger" style={{ marginTop: 8, display: "block" }}>
+          Không tìm thấy khóa học với ID này
+        </Text>
+      )}
 
       {/* CKEditor */}
       <div style={{ marginTop: 16 }}>
         <CKEditor
           editor={ClassicEditor}
           data={content}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          onChange={(_: any, editor: any) => {
+          config={{
+            extraPlugins: [MyUploadAdapterPlugin],
+          }}
+          onChange={(
+            _: unknown,
+            editor: { getData: () => SetStateAction<string> }
+          ) => {
             setContent(editor.getData());
           }}
         />

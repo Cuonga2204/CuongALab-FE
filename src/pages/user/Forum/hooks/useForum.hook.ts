@@ -6,6 +6,10 @@ import {
   createReplyApi,
   upvoteTopicApi,
   upvoteReplyApi,
+  updateTopicApi,
+  deleteTopicApi,
+  updateReplyApi,
+  deleteReplyApi,
 } from "../apis/forum.api";
 
 import type {
@@ -13,6 +17,12 @@ import type {
   CreateReplyPayload,
   UpvoteReplyPayload,
   UpvoteTopicPayload,
+  TopicItem,
+  UpdateTopicPayload,
+  DeleteTopicPayload,
+  ReplyItem,
+  UpdateReplyPayload,
+  DeleteReplyPayload,
 } from "../types/forum.types";
 
 import type { GetTopicsParams } from "../apis/forum.api";
@@ -62,5 +72,60 @@ export const useUpvoteReply = (topicId: string) => {
     mutationFn: (payload: UpvoteReplyPayload) => upvoteReplyApi(payload),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ["forumTopicDetail", topicId] }),
+  });
+};
+//new
+export const useUpdateTopic = (topicId: string) => {
+  const qc = useQueryClient();
+
+  return useMutation<TopicItem, Error, UpdateTopicPayload>({
+    mutationFn: (payload) => updateTopicApi(topicId, payload),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["forumTopicDetail", topicId],
+      });
+    },
+  });
+};
+export const useDeleteTopic = () => {
+  const qc = useQueryClient();
+
+  return useMutation<{ message: string }, Error, DeleteTopicPayload>({
+    mutationFn: ({ topicId, userId }) => deleteTopicApi(topicId, userId),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["forumTopics"],
+      });
+    },
+  });
+};
+
+export const useUpdateReply = (topicId: string) => {
+  const qc = useQueryClient();
+
+  return useMutation<ReplyItem, Error, UpdateReplyPayload>({
+    mutationFn: ({ replyId, content, userId }) =>
+      updateReplyApi(replyId, { content, userId }),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["forumTopicDetail", topicId],
+      });
+    },
+  });
+};
+export const useDeleteReply = (topicId: string) => {
+  const qc = useQueryClient();
+
+  return useMutation<{ message: string }, Error, DeleteReplyPayload>({
+    mutationFn: ({ replyId, userId }) => deleteReplyApi(replyId, userId),
+
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["forumTopicDetail", topicId],
+      });
+    },
   });
 };

@@ -7,6 +7,7 @@ import type {
   ReplyItem,
   UpvoteTopicPayload,
   UpvoteReplyPayload,
+  UpdateTopicPayload,
 } from "../types/forum.types";
 
 export interface GetTopicsParams {
@@ -51,5 +52,45 @@ export const upvoteReplyApi = async (
   payload: UpvoteReplyPayload
 ): Promise<ReplyItem> => {
   const res = await axiosClient.post("/forum/reply/upvote", payload);
+  return res.data.data;
+};
+
+//new
+
+// ===== TOPIC =====
+export const updateTopicApi = async (
+  topicId: string,
+  payload: UpdateTopicPayload
+): Promise<TopicItem> => {
+  const res = await axiosClient.put(`/forum/topic/update/${topicId}`, payload);
+  return res.data.data;
+};
+
+export const deleteTopicApi = async (
+  topicId: string,
+  userId: string
+): Promise<{ message: string }> => {
+  const res = await axiosClient.delete(`/forum/topic/delete/${topicId}`, {
+    data: { userId },
+  });
+  return res.data.data;
+};
+
+// ===== REPLY =====
+export const updateReplyApi = async (
+  replyId: string,
+  payload: { content: string; userId: string }
+): Promise<ReplyItem> => {
+  const res = await axiosClient.put(`/forum/reply/update/${replyId}`, payload);
+  return res.data.data;
+};
+
+export const deleteReplyApi = async (
+  replyId: string,
+  userId: string
+): Promise<{ message: string }> => {
+  const res = await axiosClient.delete(`/forum/reply/delete/${replyId}`, {
+    data: { userId },
+  });
   return res.data.data;
 };

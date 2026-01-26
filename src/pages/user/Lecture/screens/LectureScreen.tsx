@@ -356,12 +356,6 @@ export default function LectureScreen() {
 
             {isEnrolled ? (
               <Card style={{ marginBottom: 20 }}>
-                <TextArea
-                  rows={3}
-                  placeholder="Write a comment..."
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                />
                 <Button
                   type="primary"
                   style={{ marginTop: 10 }}

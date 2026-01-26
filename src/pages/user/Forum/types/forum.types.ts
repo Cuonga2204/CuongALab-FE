@@ -55,3 +55,25 @@ export interface UpvoteReplyPayload {
   replyId: string;
   userId: string;
 }
+
+export interface UpdateTopicPayload {
+  title?: string;
+  content?: string;
+  userId: string;
+}
+
+export interface DeleteTopicPayload {
+  topicId: string;
+  userId: string;
+}
+
+export interface UpdateReplyPayload {
+  replyId: string;
+  content: string;
+  userId: string;
+}
+
+export interface DeleteReplyPayload {
+  replyId: string;
+  userId: string;
+}
